@@ -9,17 +9,30 @@ import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './utils/interceptors/logger.interceptor';
 import { AllExceptionsFilter } from './utils/exceptions/exception.filter';
 import { AdminsModule } from './admins/admins.module';
+import { join } from 'path';
+import { EventModule } from './event/event.module';
+import { NotificationModule } from './notification/notification.module';
+import { StoreModule } from './store/store.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot(),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: join(process.cwd(), '.env'),
+    }),
     MongooseModule.forRoot(
-      'mongodb+srv://halim:20028952Sami@cluster0.b1pz3.mongodb.net/nahtahtest?retryWrites=true&w=majority',
+      process.env.MONGO_URI ??
+        (() => {
+          throw new Error('MONGO_URI environment variable is not defined');
+        })(),
       {},
     ),
     UsersModule,
     AuthModule,
     AdminsModule,
+    EventModule,
+    NotificationModule,
+    StoreModule,
   ],
   controllers: [AppController],
   providers: [

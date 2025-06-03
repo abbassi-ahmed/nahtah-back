@@ -1,26 +1,98 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAdminDto } from './dto/create-admin.dto';
-import { UpdateAdminDto } from './dto/update-admin.dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { PaginationDto } from 'src/utils/dtos/pagination.dto';
+import { FilterQuery } from 'mongoose';
+import { Admin } from './entities/admin.entity';
 
 @Injectable()
 export class AdminsService {
-  create(createAdminDto: CreateAdminDto) {
-    return 'This action adds a new admin';
+  constructor(@InjectModel(Admin.name) private adminModel: Model<Admin>) {}
+
+  async create(Admin: Admin): Promise<Admin> {
+    const createdUser = new this.adminModel(Admin);
+    return createdUser.save();
   }
 
-  findAll() {
-    return `This action returns all admins`;
+  async findAllPaginated(
+    pagination: PaginationDto,
+  ): Promise<{ data: Admin[]; total: number }> {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = '_id',
+      sortOrder = 'asc',
+    } = pagination;
+    const skip = (page - 1) * limit;
+    const sort: Record<string, 1 | -1> = {
+      [sortBy]: sortOrder === 'asc' ? 1 : -1,
+    };
+
+    const [data, total] = await Promise.all([
+      this.adminModel.find().sort(sort).skip(skip).limit(limit).exec(),
+      this.adminModel.countDocuments().exec(),
+    ]);
+
+    return { data, total };
+  }
+  // Combined find operations
+  async findOne(filter: FilterQuery<Admin>): Promise<Admin | null> {
+    return this.adminModel.findOne(filter).exec();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} admin`;
+  async findMany(filter: FilterQuery<Admin>): Promise<Admin[]> {
+    return this.adminModel.find(filter).exec();
   }
 
-  update(id: number, updateAdminDto: UpdateAdminDto) {
-    return `This action updates a #${id} admin`;
+  async findOneById(id: string): Promise<Admin | null> {
+    return this.findOne({ _id: id });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} admin`;
+  async findOneByEmail(email: string): Promise<Admin | null> {
+    return this.findOne({ email });
+  }
+
+  async findOneByUsername(username: string): Promise<Admin | null> {
+    return this.findOne({ username });
+  }
+
+  async findOneByPhone(phone: string): Promise<Admin | null> {
+    const regex = new RegExp(phone, 'i');
+    return this.findOne({ phone: { $regex: regex } });
+  }
+
+  // Combined update operations
+  async update(
+    filter: FilterQuery<Admin>,
+    update: Partial<Admin>,
+  ): Promise<Admin | null> {
+    return this.adminModel
+      .findOneAndUpdate(filter, update, { new: true })
+      .exec();
+  }
+
+  async updateById(id: string, update: Partial<Admin>): Promise<Admin | null> {
+    return this.update({ _id: id }, update);
+  }
+
+  async updateResetCode(
+    email: string,
+    code: string,
+    expiration: string,
+  ): Promise<Admin | null> {
+    return this.update({ email }, { resetCode: code, expiration });
+  }
+
+  async updatePassword(email: string, password: string): Promise<Admin | null> {
+    return this.update({ email }, { password });
+  }
+
+  // Delete operation
+  async delete(filter: FilterQuery<Admin>): Promise<Admin | null> {
+    return this.adminModel.findOneAndDelete(filter).exec();
+  }
+
+  async deleteById(id: string): Promise<Admin | null> {
+    return this.delete({ _id: id });
   }
 }
