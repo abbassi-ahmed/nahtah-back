@@ -20,11 +20,16 @@ export class AuthUserService {
     return crypto.randomBytes(length).toString('hex').slice(0, length);
   }
 
-  createToken(payload: any, expiration: string) {
-    return this.jwtService.sign(payload, {
+  createToken(payload: any, expiration?: string) {
+    const options: any = {
       secret: process.env.JWT_SECRET,
-      expiresIn: expiration,
-    });
+    };
+
+    if (expiration) {
+      options.expiresIn = expiration;
+    }
+
+    return this.jwtService.sign(payload, options);
   }
   async login(body: LoginDto) {
     const user = await this.userService.findOneByEmail(body.email);
@@ -41,18 +46,34 @@ export class AuthUserService {
     const expiresInMilliseconds = 24 * 60 * 60 * 1000;
     const expiresAt = new Date(Date.now() + expiresInMilliseconds);
 
-    const accessToken = this.createToken(
-      {
-        email: user.email,
-        id: user.id,
-      },
-      '24h',
-    );
+    const accessToken = this.createToken({
+      email: user.email,
+      id: user.id,
+    });
 
     return {
       user: user,
       access_token: accessToken,
-      expires_at: expiresAt,
+    };
+  }
+  async register(user: any) {
+    const existingUser = await this.userService.findOneByEmail(user.email);
+    if (existingUser) {
+      throw new BadRequestException('User already exists');
+    }
+    const hashedPassword = await bcrypt.hash(user.password, 10);
+    const newUser = {
+      ...user,
+      password: hashedPassword,
+    };
+    const createdUser = await this.userService.create(newUser);
+    const token = this.createToken({
+      email: createdUser.email,
+      id: createdUser.id,
+    });
+    return {
+      user: createdUser,
+      access_token: token,
     };
   }
 

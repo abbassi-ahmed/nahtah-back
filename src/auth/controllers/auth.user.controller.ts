@@ -3,14 +3,19 @@ import { AuthUserService } from '../services/auth.user.service';
 import { ApiTags } from '@nestjs/swagger';
 import { LoginDto } from '../dtos/login.dto';
 
-@Controller('auth')
-@ApiTags('auth')
+@Controller('auth-user')
+@ApiTags('auth-user')
 export class AuthUserController {
   constructor(private authService: AuthUserService) {}
 
   @Post()
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Post('signup')
+  register(@Body() dto: any) {
+    return this.authService.register(dto);
   }
 
   @Post('reset-password-link')

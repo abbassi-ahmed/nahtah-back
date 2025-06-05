@@ -13,6 +13,8 @@ import { join } from 'path';
 import { EventModule } from './event/event.module';
 import { NotificationModule } from './notification/notification.module';
 import { StoreModule } from './store/store.module';
+import { NewsletterModule } from './newsletter/newsletter.module';
+import { OffDayModule } from './off-day/off-day.module';
 
 @Module({
   imports: [
@@ -21,11 +23,7 @@ import { StoreModule } from './store/store.module';
       envFilePath: join(process.cwd(), '.env'),
     }),
     MongooseModule.forRoot(
-      process.env.MONGO_URI ??
-        (() => {
-          throw new Error('MONGO_URI environment variable is not defined');
-        })(),
-      {},
+      'mongodb+srv://abbassi2002ahmed4:aekxX0xcOzMAhOwr@nahtahdb.i8lrmnz.mongodb.net/?retryWrites=true&w=majority&appName=nahtahdb',
     ),
     UsersModule,
     AuthModule,
@@ -33,6 +31,8 @@ import { StoreModule } from './store/store.module';
     EventModule,
     NotificationModule,
     StoreModule,
+    NewsletterModule,
+    OffDayModule,
   ],
   controllers: [AppController],
   providers: [

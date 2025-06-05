@@ -9,7 +9,6 @@ import { FilterQuery } from 'mongoose';
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
-  // Combined CRUD operations
   async create(user: User): Promise<User> {
     const createdUser = new this.userModel(user);
     return createdUser.save();
