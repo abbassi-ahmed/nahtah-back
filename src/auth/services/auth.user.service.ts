@@ -38,13 +38,9 @@ export class AuthUserService {
       throw new NotFoundException('User not found');
     }
     const isMatch = await bcrypt.compare(body.password, user.password);
-
     if (!isMatch) {
       throw new BadRequestException('Invalid credentials');
     }
-
-    const expiresInMilliseconds = 24 * 60 * 60 * 1000;
-    const expiresAt = new Date(Date.now() + expiresInMilliseconds);
 
     const accessToken = this.createToken({
       email: user.email,
@@ -57,10 +53,19 @@ export class AuthUserService {
     };
   }
   async register(user: any) {
-    const existingUser = await this.userService.findOneByEmail(user.email);
-    if (existingUser) {
-      throw new BadRequestException('User already exists');
+    const [existingUser, phoneExist] = await Promise.all([
+      this.userService.findOneByEmail(user.email),
+      this.userService.findOneByPhone(user.phone),
+    ]);
+
+    if (phoneExist) {
+      throw new BadRequestException('رقم الهاتف موجود بالفعل');
     }
+
+    if (existingUser) {
+      throw new BadRequestException('المستخدم موجود بالفعل');
+    }
+
     const hashedPassword = await bcrypt.hash(user.password, 10);
     const newUser = {
       ...user,
