@@ -19,7 +19,6 @@ export class StoreController {
     return this.storeService.create({
       timeOpen: createStoreDto.timeOpen,
       timeClose: createStoreDto.timeClose,
-      userId: createStoreDto.userId,
     });
   }
 

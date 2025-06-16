@@ -9,22 +9,41 @@ export class StoreService {
   constructor(@InjectModel(Store.name) private storeModel: Model<Store>) {}
 
   private parseStoreTime(timeString: string): Date {
-    return new Date(`1970-01-01T${timeString}:00Z`);
+    const [hours, minutes, seconds] = timeString.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, seconds, 0);
+    return date;
   }
 
-  private validateAndAdjustTimes(
-    openTime: Date,
-    closeTime: Date,
-  ): { openTime: Date; closeTime: Date } {
+  private validateAndAdjustTimes(openTime: Date, closeTime: Date): void {
     if (closeTime <= openTime) {
-      closeTime.setUTCDate(closeTime.getUTCDate() + 1);
+      closeTime.setDate(closeTime.getDate() + 1);
     }
-    return { openTime, closeTime };
+  }
+  private generateTimeSlots(openTime: string, closeTime: string): string[] {
+    const slots: string[] = [];
+    let currentTime = new Date(openTime);
+    const openTimeFo = new Date(openTime);
+    const adjustedCloseTime = new Date(closeTime);
+    if (adjustedCloseTime <= openTimeFo) {
+      adjustedCloseTime.setDate(adjustedCloseTime.getDate() + 1);
+    }
+
+    while (currentTime < adjustedCloseTime) {
+      const hours = currentTime.getHours().toString().padStart(2, '0');
+      const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+      slots.push(`${hours}:${minutes}`);
+
+      currentTime = new Date(currentTime.getTime() + 30 * 60000);
+    }
+
+    return slots;
   }
 
   async create(createStoreDto: CreateStoreDto): Promise<Store> {
-    const { timeOpen, timeClose, userId } = createStoreDto;
+    const { timeOpen, timeClose } = createStoreDto;
 
+    await this.storeModel.deleteMany().exec();
     let openTime: Date;
     let closeTime: Date;
 
@@ -40,7 +59,6 @@ export class StoreService {
     const storeData = {
       timeOpen: openTime,
       timeClose: closeTime,
-      userId: new Types.ObjectId(userId),
     };
 
     try {
@@ -50,12 +68,11 @@ export class StoreService {
       throw new Error(`Failed to create store: ${error.message}`);
     }
   }
-
   async findAll(): Promise<Store[]> {
     return this.storeModel.find().exec();
   }
 
-  async findOne(id: string): Promise<Store> {
+  async findOne(id: string): Promise<string[]> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Invalid store ID');
     }
@@ -64,7 +81,8 @@ export class StoreService {
     if (!store) {
       throw new NotFoundException('Store not found');
     }
-    return store;
+
+    return this.generateTimeSlots(store.timeOpen, store.timeClose);
   }
 
   async update(id: string, updateStoreDto: UpdateStoreDto): Promise<Store> {
@@ -86,9 +104,6 @@ export class StoreService {
         {
           timeOpen: openTime,
           timeClose: closeTime,
-          ...(updateStoreDto.userId && {
-            userId: new Types.ObjectId(updateStoreDto.userId),
-          }),
         },
         { new: true },
       )
