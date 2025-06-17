@@ -26,7 +26,7 @@ export class UsersController {
   async findAll(
     @Query() pagination: PaginationDto,
   ): Promise<{ data: User[]; total: number }> {
-    return this.usersService.findAllPaginated(pagination);
+    return this.usersService.findAllPaginatedUsers(pagination);
   }
 
   @Get('search')

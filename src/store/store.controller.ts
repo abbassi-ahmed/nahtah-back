@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { StoreService } from './store.service';
 import { CreateStoreDto, UpdateStoreDto } from './dto/create-store.dto';
+import { TTimeSlot } from 'src/types/timeSlot';
 
 @Controller('stores')
 export class StoreController {
@@ -22,9 +23,10 @@ export class StoreController {
     });
   }
 
-  @Get()
-  findAll() {
-    return this.storeService.findAll();
+  @Post('date')
+  async getByDate(@Body() body: { date: string }): Promise<TTimeSlot[]> {
+    const result = await this.storeService.getByDate(body.date);
+    return result.AllTimes;
   }
 
   @Get(':id')

@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Store } from './entities/store.entity';
 import { CreateStoreDto, UpdateStoreDto } from './dto/create-store.dto';
+import { TTimeSlot } from 'src/types/timeSlot';
 
 @Injectable()
 export class StoreService {
@@ -68,10 +69,65 @@ export class StoreService {
       throw new Error(`Failed to create store: ${error.message}`);
     }
   }
-  async findAll(): Promise<Store[]> {
-    return this.storeModel.find().exec();
-  }
 
+  async getByDate(date: string): Promise<{ AllTimes: TTimeSlot[] }> {
+    const [store] = await this.storeModel.find().limit(1).exec();
+    if (!store) return { AllTimes: [] };
+
+    const slots = this.generateTimeSlots(store.timeOpen, store.timeClose);
+
+    const now = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }),
+    );
+    const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const requestedDate = new Date(date);
+    const isSameDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+
+    const isToday = isSameDay(requestedDate, now);
+    const isYesterday = isSameDay(
+      requestedDate,
+      new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1),
+    );
+    const isPastDate =
+      requestedDate <
+      new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const allTimes: TTimeSlot[] = [];
+    let passedMidnight = false;
+
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+
+      if (!passedMidnight && i > 0 && slot === '00:00') {
+        passedMidnight = true;
+      }
+
+      const [hours, minutes] = slot.split(':').map(Number);
+      const slotTimeInMinutes = hours * 60 + minutes;
+
+      let isPast = false;
+
+      if (isToday) {
+        isPast = !passedMidnight && slotTimeInMinutes <= currentTimeInMinutes;
+      } else if (isPastDate) {
+        isPast = true;
+      } else if (isYesterday && passedMidnight) {
+        isPast = slotTimeInMinutes <= currentTimeInMinutes;
+      }
+
+      allTimes.push({
+        time: slot,
+        isPast,
+        isAfterMidnight: passedMidnight,
+      });
+    }
+
+    return { AllTimes: allTimes };
+  }
   async findOne(id: string): Promise<string[]> {
     if (!Types.ObjectId.isValid(id)) {
       throw new NotFoundException('Invalid store ID');

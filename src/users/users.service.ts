@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { User } from './entities/user.entity';
 import { PaginationDto } from 'src/utils/dtos/pagination.dto';
 import { FilterQuery } from 'mongoose';
+import { findAllPaginated } from 'src/utils/generic/pagination';
 
 @Injectable()
 export class UsersService {
@@ -14,26 +15,8 @@ export class UsersService {
     return createdUser.save();
   }
 
-  async findAllPaginated(
-    pagination: PaginationDto,
-  ): Promise<{ data: User[]; total: number }> {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = '_id',
-      sortOrder = 'asc',
-    } = pagination;
-    const skip = (page - 1) * limit;
-    const sort: Record<string, 1 | -1> = {
-      [sortBy]: sortOrder === 'asc' ? 1 : -1,
-    };
-
-    const [data, total] = await Promise.all([
-      this.userModel.find().sort(sort).skip(skip).limit(limit).exec(),
-      this.userModel.countDocuments().exec(),
-    ]);
-
-    return { data, total };
+  async findAllPaginatedUsers(pagination: PaginationDto) {
+    return findAllPaginated(this.userModel, pagination);
   }
   // Combined find operations
   async findOne(filter: FilterQuery<User>): Promise<User | null> {

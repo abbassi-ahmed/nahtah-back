@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { PaginationDto } from 'src/utils/dtos/pagination.dto';
 import { FilterQuery } from 'mongoose';
 import { Admin } from './entities/admin.entity';
+import { findAllPaginated } from 'src/utils/generic/pagination';
 
 @Injectable()
 export class AdminsService {
@@ -14,27 +15,6 @@ export class AdminsService {
     return createdUser.save();
   }
 
-  async findAllPaginated(
-    pagination: PaginationDto,
-  ): Promise<{ data: Admin[]; total: number }> {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = '_id',
-      sortOrder = 'asc',
-    } = pagination;
-    const skip = (page - 1) * limit;
-    const sort: Record<string, 1 | -1> = {
-      [sortBy]: sortOrder === 'asc' ? 1 : -1,
-    };
-
-    const [data, total] = await Promise.all([
-      this.adminModel.find().sort(sort).skip(skip).limit(limit).exec(),
-      this.adminModel.countDocuments().exec(),
-    ]);
-
-    return { data, total };
-  }
   // Combined find operations
   async findOne(filter: FilterQuery<Admin>): Promise<Admin | null> {
     return this.adminModel.findOne(filter).exec();
@@ -44,6 +24,9 @@ export class AdminsService {
     return this.adminModel.find(filter).exec();
   }
 
+  async findAllPaginatedAdmins(pagination: PaginationDto) {
+    return findAllPaginated(this.adminModel, pagination);
+  }
   async findOneById(id: string): Promise<Admin | null> {
     return this.findOne({ _id: id });
   }

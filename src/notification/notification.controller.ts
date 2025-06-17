@@ -30,7 +30,7 @@ export class NotificationController {
   findAllPaginated(
     @Query() pagination: PaginationDto,
   ): Promise<{ data: Notification[]; total: number }> {
-    return this.notificationService.findAllPaginated(pagination);
+    return this.notificationService.findAllPaginatedNotifications(pagination);
   }
 
   @Get('user/:userId')

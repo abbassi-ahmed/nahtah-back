@@ -26,7 +26,7 @@ export class AdminsController {
   async findAll(
     @Query() pagination: PaginationDto,
   ): Promise<{ data: Admin[]; total: number }> {
-    return this.adminsService.findAllPaginated(pagination);
+    return this.adminsService.findAllPaginatedAdmins(pagination);
   }
 
   @Get('search')

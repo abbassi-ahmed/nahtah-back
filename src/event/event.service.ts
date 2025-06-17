@@ -3,45 +3,24 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Event } from './entities/event.entity';
 import { Model } from 'mongoose';
 import { PaginationDto } from 'src/utils/dtos/pagination.dto';
+import { findAllPaginated } from 'src/utils/generic/pagination';
 
 @Injectable()
 export class EventService {
   constructor(@InjectModel(Event.name) private eventModel: Model<Event>) {}
 
   async create(Event: Event): Promise<Event> {
-    const createdUser = new this.eventModel(Event);
+    const createdUser = new this.eventModel(Event.title);
+    console.log(createdUser);
     return createdUser.save();
   }
 
-  async findAllPaginated(
-    pagination: PaginationDto,
-  ): Promise<{ data: Event[]; total: number }> {
-    const {
-      page = 1,
-      limit = 10,
-      sortBy = '_id',
-      sortOrder = 'asc',
-    } = pagination;
-    const skip = (page - 1) * limit;
-    const sort: Record<string, 1 | -1> = {
-      [sortBy]: sortOrder === 'asc' ? 1 : -1,
-    };
-
-    const [data, total] = await Promise.all([
-      this.eventModel
-        .find()
-        .populate('client')
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .exec(),
-      this.eventModel.countDocuments().exec(),
-    ]);
-
-    return { data, total };
-  }
   async countDocuments(): Promise<number> {
     return this.eventModel.countDocuments().exec();
+  }
+
+  async findAllPaginatedEvents(pagination: PaginationDto) {
+    return findAllPaginated(this.eventModel, pagination);
   }
 
   async updateStatus(

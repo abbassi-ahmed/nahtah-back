@@ -18,6 +18,7 @@ export class EventController {
 
   @Post()
   create(@Body() createEventDto: Event): Promise<Event> {
+    console.log(createEventDto);
     return this.eventService.create(createEventDto);
   }
 
@@ -30,7 +31,7 @@ export class EventController {
   findAllPaginated(
     @Query() pagination: PaginationDto,
   ): Promise<{ data: Event[]; total: number }> {
-    return this.eventService.findAllPaginated(pagination);
+    return this.eventService.findAllPaginatedEvents(pagination);
   }
 
   @Get('status/:status')
