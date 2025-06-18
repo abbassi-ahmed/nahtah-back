@@ -1,45 +1,28 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  forwardRef,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Store } from './entities/store.entity';
 import { CreateStoreDto, UpdateStoreDto } from './dto/create-store.dto';
 import { TTimeSlot } from 'src/types/timeSlot';
+import { EventService } from 'src/event/event.service';
+import {
+  generateTimeSlots,
+  parseStoreTime,
+  validateAndAdjustTimes,
+} from 'src/utils/timeStore';
 
 @Injectable()
 export class StoreService {
-  constructor(@InjectModel(Store.name) private storeModel: Model<Store>) {}
-
-  private parseStoreTime(timeString: string): Date {
-    const [hours, minutes, seconds] = timeString.split(':').map(Number);
-    const date = new Date();
-    date.setHours(hours, minutes, seconds, 0);
-    return date;
-  }
-
-  private validateAndAdjustTimes(openTime: Date, closeTime: Date): void {
-    if (closeTime <= openTime) {
-      closeTime.setDate(closeTime.getDate() + 1);
-    }
-  }
-  private generateTimeSlots(openTime: string, closeTime: string): string[] {
-    const slots: string[] = [];
-    let currentTime = new Date(openTime);
-    const openTimeFo = new Date(openTime);
-    const adjustedCloseTime = new Date(closeTime);
-    if (adjustedCloseTime <= openTimeFo) {
-      adjustedCloseTime.setDate(adjustedCloseTime.getDate() + 1);
-    }
-
-    while (currentTime < adjustedCloseTime) {
-      const hours = currentTime.getHours().toString().padStart(2, '0');
-      const minutes = currentTime.getMinutes().toString().padStart(2, '0');
-      slots.push(`${hours}:${minutes}`);
-
-      currentTime = new Date(currentTime.getTime() + 30 * 60000);
-    }
-
-    return slots;
-  }
+  constructor(
+    @InjectModel(Store.name) private storeModel: Model<Store>,
+    @Inject(forwardRef(() => EventService))
+    private eventService: EventService,
+  ) {}
 
   async create(createStoreDto: CreateStoreDto): Promise<Store> {
     const { timeOpen, timeClose } = createStoreDto;
@@ -49,12 +32,12 @@ export class StoreService {
     let closeTime: Date;
 
     if (!timeOpen || !timeClose) {
-      openTime = this.parseStoreTime('00:00:00');
-      closeTime = this.parseStoreTime('23:59:59');
+      openTime = parseStoreTime('00:00:00');
+      closeTime = parseStoreTime('23:59:59');
     } else {
-      openTime = this.parseStoreTime(timeOpen);
-      closeTime = this.parseStoreTime(timeClose);
-      this.validateAndAdjustTimes(openTime, closeTime);
+      openTime = parseStoreTime(timeOpen);
+      closeTime = parseStoreTime(timeClose);
+      validateAndAdjustTimes(openTime, closeTime);
     }
 
     const storeData = {
@@ -74,7 +57,7 @@ export class StoreService {
     const [store] = await this.storeModel.find().limit(1).exec();
     if (!store) return { AllTimes: [] };
 
-    const slots = this.generateTimeSlots(store.timeOpen, store.timeClose);
+    const slots = generateTimeSlots(store.timeOpen, store.timeClose);
 
     const now = new Date(
       new Date().toLocaleString('en-US', { timeZone: 'Asia/Riyadh' }),
@@ -138,7 +121,7 @@ export class StoreService {
       throw new NotFoundException('Store not found');
     }
 
-    return this.generateTimeSlots(store.timeOpen, store.timeClose);
+    return generateTimeSlots(store.timeOpen, store.timeClose);
   }
 
   async update(id: string, updateStoreDto: UpdateStoreDto): Promise<Store> {
@@ -150,9 +133,9 @@ export class StoreService {
     if (!timeOpen || !timeClose) {
       throw new NotFoundException('TimeOpen and TimeClose are required');
     }
-    const openTime = this.parseStoreTime(timeOpen);
-    const closeTime = this.parseStoreTime(timeClose);
-    this.validateAndAdjustTimes(openTime, closeTime);
+    const openTime = parseStoreTime(timeOpen);
+    const closeTime = parseStoreTime(timeClose);
+    validateAndAdjustTimes(openTime, closeTime);
 
     const updatedStore = await this.storeModel
       .findByIdAndUpdate(
