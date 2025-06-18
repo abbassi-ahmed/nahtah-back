@@ -31,7 +31,10 @@ export class EventService {
   }
 
   async findAllPaginatedEvents(pagination: PaginationDto) {
-    return findAllPaginated(this.eventModel, pagination);
+    return findAllPaginated(this.eventModel, pagination, {
+      path: 'client',
+      select: '-__v -password -createdAt -updatedAt -type -position',
+    });
   }
 
   async updateStatus(

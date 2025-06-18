@@ -7,10 +7,16 @@ export class Event extends Document {
   title: string;
 
   @Prop({ type: String, required: true })
-  start: string;
+  startDate: string;
 
   @Prop({ type: String, required: true })
-  end: string;
+  endDate: string;
+
+  @Prop({ type: String, required: true })
+  startTime: string;
+
+  @Prop({ type: String, required: true })
+  endTime: string;
 
   @Prop({ type: String })
   userId: string;

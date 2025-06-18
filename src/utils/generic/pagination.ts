@@ -1,9 +1,10 @@
-import { Model } from 'mongoose';
+import { Model, PopulateOptions } from 'mongoose';
 import { PaginationDto } from '../dtos/pagination.dto';
 
 async function findAllPaginated<T>(
   model: Model<T>,
   pagination: PaginationDto,
+  populate?: PopulateOptions | (PopulateOptions | string)[],
 ): Promise<{ data: T[]; total: number }> {
   const {
     page = 1,
@@ -17,8 +18,15 @@ async function findAllPaginated<T>(
     [sortBy]: sortOrder === 'asc' ? 1 : -1,
   };
 
+  let query = model.find().sort(sort).skip(skip).limit(limit);
+
+  // Apply population if provided
+  if (populate) {
+    query = query.populate(populate);
+  }
+
   const [data, total] = await Promise.all([
-    model.find().sort(sort).skip(skip).limit(limit).exec(),
+    query.exec(),
     model.countDocuments().exec(),
   ]);
 

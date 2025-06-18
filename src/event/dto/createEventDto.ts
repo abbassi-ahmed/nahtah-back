@@ -1,7 +1,9 @@
 export class CreateEventDto {
   title: string;
-  start: string;
-  end: string;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
   userId: string;
   description: string;
   barberImg: string;
