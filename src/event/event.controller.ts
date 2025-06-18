@@ -11,14 +11,14 @@ import {
 import { EventService } from './event.service';
 import { Event } from './entities/event.entity';
 import { PaginationDto } from '../utils/dtos/pagination.dto';
+import { CreateEventDto } from './dto/createEventDto';
 
 @Controller('events')
 export class EventController {
   constructor(private readonly eventService: EventService) {}
 
   @Post()
-  create(@Body() createEventDto: Event): Promise<Event> {
-    console.log(createEventDto);
+  create(@Body() createEventDto: CreateEventDto) {
     return this.eventService.create(createEventDto);
   }
 

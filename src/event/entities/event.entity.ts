@@ -24,8 +24,12 @@ export class Event extends Document {
   @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   client: Types.ObjectId;
 
-  @Prop({ type: Boolean, default: null })
-  status: boolean | null;
+  @Prop({
+    type: String,
+    enum: ['ACCEPTED', 'DECLINED', 'PENDING'],
+    default: 'PENDING',
+  })
+  status: 'ACCEPTED' | 'DECLINED' | 'PENDING';
 
   @Prop({ type: String })
   reason: string;

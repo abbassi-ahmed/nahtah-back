@@ -1,18 +1,29 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Event } from './entities/event.entity';
 import { Model } from 'mongoose';
 import { PaginationDto } from 'src/utils/dtos/pagination.dto';
 import { findAllPaginated } from 'src/utils/generic/pagination';
+import { CreateEventDto } from './dto/createEventDto';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class EventService {
-  constructor(@InjectModel(Event.name) private eventModel: Model<Event>) {}
+  constructor(
+    @InjectModel(Event.name) private eventModel: Model<Event>,
+    @Inject(forwardRef(() => UsersService))
+    private usersService: UsersService,
+  ) {}
 
-  async create(Event: Event): Promise<Event> {
-    const createdUser = new this.eventModel(Event.title);
-    console.log(createdUser);
-    return createdUser.save();
+  async create(event: CreateEventDto) {
+    const client = await this.usersService.findOneById(event.clientId);
+    if (!client) {
+      throw new Error('Client not found');
+    }
+    return this.eventModel.create({
+      ...event,
+      client,
+    });
   }
 
   async countDocuments(): Promise<number> {
