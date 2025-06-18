@@ -12,6 +12,7 @@ import { PaginationDto } from 'src/utils/dtos/pagination.dto';
 import { FilterQuery } from 'mongoose';
 import { Admin } from './entities/admin.entity';
 import { AdminsService } from './admins.service';
+import { PaginatedResult } from 'src/types/paginatedResult';
 
 @Controller('admins')
 export class AdminsController {
@@ -25,7 +26,7 @@ export class AdminsController {
   @Get()
   async findAll(
     @Query() pagination: PaginationDto,
-  ): Promise<{ data: Admin[]; total: number }> {
+  ): Promise<PaginatedResult<Admin>> {
     return this.adminsService.findAllPaginatedAdmins(pagination);
   }
 

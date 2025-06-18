@@ -11,6 +11,7 @@ import {
 import { NotificationService } from './notification.service';
 import { Notification } from './entities/notification.entity';
 import { PaginationDto } from '../utils/dtos/pagination.dto';
+import { PaginatedResult } from 'src/types/paginatedResult';
 
 @Controller('notifications')
 export class NotificationController {
@@ -29,7 +30,7 @@ export class NotificationController {
   @Get('all')
   findAllPaginated(
     @Query() pagination: PaginationDto,
-  ): Promise<{ data: Notification[]; total: number }> {
+  ): Promise<PaginatedResult<Notification>> {
     return this.notificationService.findAllPaginatedNotifications(pagination);
   }
 

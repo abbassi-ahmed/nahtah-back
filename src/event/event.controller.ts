@@ -12,6 +12,7 @@ import { EventService } from './event.service';
 import { Event } from './entities/event.entity';
 import { PaginationDto } from '../utils/dtos/pagination.dto';
 import { CreateEventDto } from './dto/createEventDto';
+import { PaginatedResult } from 'src/types/paginatedResult';
 
 @Controller('events')
 export class EventController {
@@ -30,7 +31,7 @@ export class EventController {
   @Get('all')
   findAllPaginated(
     @Query() pagination: PaginationDto,
-  ): Promise<{ data: Event[]; total: number }> {
+  ): Promise<PaginatedResult<Event>> {
     return this.eventService.findAllPaginatedEvents(pagination);
   }
 
