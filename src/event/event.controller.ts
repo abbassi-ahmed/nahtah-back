@@ -7,12 +7,14 @@ import {
   Param,
   Delete,
   Query,
+  Put,
 } from '@nestjs/common';
 import { EventService } from './event.service';
 import { Event } from './entities/event.entity';
 import { PaginationDto } from '../utils/dtos/pagination.dto';
 import { CreateEventDto } from './dto/createEventDto';
 import { PaginatedResult } from 'src/types/paginatedResult';
+import { UpdateFeedbackDto } from './dto/updateEventDto';
 
 @Controller('events')
 export class EventController {
@@ -62,15 +64,15 @@ export class EventController {
 
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Event | null> {
-    return this.eventService.findOne(+id);
+    return this.eventService.findOne(id);
   }
 
   @Patch(':id')
   update(
     @Param('id') id: string,
-    @Body() updateEventDto: Event,
+    @Body() updateEventDto: CreateEventDto,
   ): Promise<Event | null> {
-    return this.eventService.update(+id, updateEventDto);
+    return this.eventService.update(id, updateEventDto);
   }
 
   @Patch(':id/status/:status')
@@ -85,6 +87,21 @@ export class EventController {
     else statusValue = null;
 
     return this.eventService.updateStatus(id, statusValue);
+  }
+  @Put(':id/feedback')
+  updateFeedback(
+    @Param('id') id: string,
+    @Body() { feedback, rate }: UpdateFeedbackDto,
+  ): Promise<Event | null> {
+    return this.eventService.updateFeedback(id, feedback, rate);
+  }
+
+  @Put(':id/status')
+  updateEventStatus(
+    @Param('id') id: string,
+    @Body() { status }: { status: 'ACCEPTED' | 'DECLINED' | 'PENDING' },
+  ): Promise<Event | null> {
+    return this.eventService.updateEventStatus(id, status);
   }
 
   @Delete(':id')

@@ -12,13 +12,16 @@ import { NotificationService } from './notification.service';
 import { Notification } from './entities/notification.entity';
 import { PaginationDto } from '../utils/dtos/pagination.dto';
 import { PaginatedResult } from 'src/types/paginatedResult';
+import { CreateNotificationDto } from './dto/createNotificationDto';
 
 @Controller('notifications')
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
   @Post()
-  create(@Body() createNotificationDto: Notification): Promise<Notification> {
+  create(
+    @Body() createNotificationDto: CreateNotificationDto,
+  ): Promise<Notification> {
     return this.notificationService.create(createNotificationDto);
   }
 
@@ -33,15 +36,26 @@ export class NotificationController {
   ): Promise<PaginatedResult<Notification>> {
     return this.notificationService.findAllPaginatedNotifications(pagination);
   }
-
-  @Get('user/:userId')
-  getByUserId(@Param('userId') userId: string): Promise<Notification[]> {
+  @Get('count/:id')
+  getNumberOfNotifications(@Param('id') id: string): Promise<number> {
+    return this.notificationService.findNumberOfNotifications({ id });
+  }
+  @Get('user/:id')
+  getByUserId(@Param('id') userId: string): Promise<Notification[]> {
     return this.notificationService.getByUserId(userId);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Notification | null> {
     return this.notificationService.findOne(+id);
+  }
+
+  @Post('mark-as-viewed')
+  async markAsViewed(
+    @Body() body: { userId: string; notificationIds: string[] },
+  ) {
+    const { userId, notificationIds } = body;
+    return this.notificationService.markAsViewed(userId, notificationIds);
   }
 
   @Patch(':id')
@@ -55,5 +69,9 @@ export class NotificationController {
   @Delete(':id')
   remove(@Param('id') id: string): Promise<Notification | null> {
     return this.notificationService.remove(+id);
+  }
+  @Delete()
+  removeAll() {
+    return this.notificationService.deleteAll();
   }
 }

@@ -31,12 +31,18 @@ export class EventService {
   }
 
   async findAllPaginatedEvents(pagination: PaginationDto) {
-    return findAllPaginated(this.eventModel, pagination, {
-      path: 'client',
-      select: '-__v -password -createdAt -updatedAt -type -position',
-    });
-  }
+    const filter = pagination.id ? { client: pagination.id } : {};
 
+    return findAllPaginated(
+      this.eventModel,
+      pagination,
+      {
+        path: 'client',
+        select: '-__v -password -createdAt -updatedAt -type -position',
+      },
+      filter,
+    );
+  }
   async updateStatus(
     id: string,
     status: true | false | null,
@@ -59,21 +65,32 @@ export class EventService {
     return await this.eventModel.find().populate('client').exec();
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     return await this.eventModel.findById(id).populate('client').exec();
   }
 
-  async getEventByDate(today: string) {
-    const regex = new RegExp(today.slice(0, 10), 'i');
-    return await this.eventModel
-      .find({ start: { $regex: regex }, status: { $ne: false } })
+  async getEventByDate(today: string): Promise<any[]> {
+    const [month, day, year] = today.split('-');
+    const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+    const events = await this.eventModel
+      .find({
+        startDate: formattedDate,
+        status: { $in: ['ACCEPTED', 'PENDING'] },
+      })
       .populate('client')
       .exec();
+
+    return events;
   }
 
-  async update(id: number, updateEventDto: Event) {
+  async update(id: string, updateEventDto: CreateEventDto) {
     return await this.eventModel
-      .findByIdAndUpdate(id, updateEventDto, { new: true })
+      .findByIdAndUpdate(
+        id,
+        { ...updateEventDto, status: 'PENDING' },
+        { new: true },
+      )
       .populate('client')
       .exec();
   }
@@ -84,5 +101,20 @@ export class EventService {
 
   async deleteAll(): Promise<void> {
     await this.eventModel.deleteMany({});
+  }
+
+  async updateFeedback(id: string, feedback: string, rate: number) {
+    return await this.eventModel
+      .findByIdAndUpdate(id, { feedback, rate }, { new: true })
+      .exec();
+  }
+
+  async updateEventStatus(
+    id: string,
+    status: 'ACCEPTED' | 'DECLINED' | 'PENDING',
+  ) {
+    return await this.eventModel
+      .findByIdAndUpdate(id, { status }, { new: true })
+      .exec();
   }
 }

@@ -2,6 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Newsletter } from './entities/newsletter.entity';
 import { Model } from 'mongoose';
+import { PaginationDto } from 'src/utils/dtos/pagination.dto';
+import { findAllPaginated } from 'src/utils/generic/pagination';
+import { CreateNewsletterDto } from './dto/createNewsLetter';
 
 @Injectable()
 export class NewsletterService {
@@ -9,13 +12,18 @@ export class NewsletterService {
     @InjectModel(Newsletter.name)
     private readonly newsletterModel: Model<Newsletter>,
   ) {}
-  async create(createNewsletterDto: Newsletter) {
+
+  async create(createNewsletterDto: CreateNewsletterDto) {
     const createdNewsletter = new this.newsletterModel(createNewsletterDto);
     return await createdNewsletter.save();
   }
 
   async findAll() {
     return this.newsletterModel.find().exec();
+  }
+
+  async findAllPaginatedNews(pagination: PaginationDto) {
+    return findAllPaginated(this.newsletterModel, pagination);
   }
 
   async findOne(id: number) {
@@ -46,5 +54,9 @@ export class NewsletterService {
       throw new Error('Newsletter not found');
     }
     return deletedNewsletter;
+  }
+
+  async removeAll(): Promise<any> {
+    return await this.newsletterModel.deleteMany({}).exec();
   }
 }

@@ -53,10 +53,14 @@ export class StoreService {
     }
   }
 
-  async getByDate(date: string): Promise<{ AllTimes: TTimeSlot[] }> {
+  async getByDate(
+    date: string,
+    userId: string,
+  ): Promise<{ AllTimes: TTimeSlot[] }> {
     const [store] = await this.storeModel.find().limit(1).exec();
     if (!store) return { AllTimes: [] };
 
+    const events = await this.eventService.getEventByDate(date);
     const slots = generateTimeSlots(store.timeOpen, store.timeClose);
 
     const now = new Date(
@@ -82,6 +86,13 @@ export class StoreService {
     const allTimes: TTimeSlot[] = [];
     let passedMidnight = false;
 
+    const bookedSlots = new Set<string>();
+    events.forEach((event) => {
+      if (event.userId === userId) {
+        bookedSlots.add(event.startTime);
+      }
+    });
+
     for (let i = 0; i < slots.length; i++) {
       const slot = slots[i];
 
@@ -106,6 +117,7 @@ export class StoreService {
         time: slot,
         isPast,
         isAfterMidnight: passedMidnight,
+        isBooked: bookedSlots.has(slot),
       });
     }
 

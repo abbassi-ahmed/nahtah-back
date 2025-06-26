@@ -18,7 +18,7 @@ export class UsersService {
   async findAllPaginatedUsers(pagination: PaginationDto) {
     return findAllPaginated(this.userModel, pagination);
   }
-  // Combined find operations
+
   async findOne(filter: FilterQuery<User>): Promise<User | null> {
     return this.userModel.findOne(filter).exec();
   }
@@ -44,7 +44,6 @@ export class UsersService {
     return this.findOne({ phone: { $regex: regex } });
   }
 
-  // Combined update operations
   async update(
     filter: FilterQuery<User>,
     update: Partial<User>,

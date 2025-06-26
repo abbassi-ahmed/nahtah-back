@@ -24,8 +24,10 @@ export class StoreController {
   }
 
   @Post('date')
-  async getByDate(@Body() body: { date: string }): Promise<TTimeSlot[]> {
-    const result = await this.storeService.getByDate(body.date);
+  async getByDate(
+    @Body() body: { date: string; userId: string },
+  ): Promise<TTimeSlot[]> {
+    const result = await this.storeService.getByDate(body.date, body.userId);
     return result.AllTimes;
   }
 

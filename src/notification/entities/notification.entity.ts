@@ -19,11 +19,8 @@ export class Notification extends Document {
   @Prop({ type: SchemaTypes.ObjectId, ref: 'User' })
   client: Types.ObjectId | User;
 
-  @Prop({ type: Boolean, default: false })
-  vue: boolean;
-
-  @Prop({ type: String, default: 'Notification' })
-  type: string;
+  @Prop({ type: [{ type: SchemaTypes.ObjectId, ref: 'User' }], default: [] })
+  viewedBy: Types.ObjectId[];
 }
 
 export const NotificationSchema = SchemaFactory.createForClass(Notification);

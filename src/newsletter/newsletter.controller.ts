@@ -6,17 +6,28 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { NewsletterService } from './newsletter.service';
 import { Newsletter } from './entities/newsletter.entity';
+import { PaginationDto } from 'src/utils/dtos/pagination.dto';
+import { PaginatedResult } from 'src/types/paginatedResult';
+import { CreateNewsletterDto } from './dto/createNewsLetter';
 
 @Controller('newsletter')
 export class NewsletterController {
   constructor(private readonly newsletterService: NewsletterService) {}
 
   @Post()
-  create(@Body() createNewsletterDto: Newsletter) {
+  create(@Body() createNewsletterDto: CreateNewsletterDto) {
     return this.newsletterService.create(createNewsletterDto);
+  }
+
+  @Get('all')
+  async findAllPaginated(
+    @Query() pagination: PaginationDto,
+  ): Promise<PaginatedResult<Newsletter>> {
+    return this.newsletterService.findAllPaginatedNews(pagination);
   }
 
   @Get()
@@ -42,5 +53,9 @@ export class NewsletterController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.newsletterService.remove(+id);
+  }
+  @Delete()
+  removeAll() {
+    return this.newsletterService.removeAll();
   }
 }

@@ -20,5 +20,9 @@ export class PaginationDto {
 
   @IsOptional()
   @IsString()
+  id?: string;
+
+  @IsOptional()
+  @IsString()
   sortOrder?: 'asc' | 'desc' = 'asc';
 }

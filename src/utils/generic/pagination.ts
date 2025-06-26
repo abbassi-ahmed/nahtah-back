@@ -6,6 +6,7 @@ async function findAllPaginated<T>(
   model: Model<T>,
   pagination: PaginationDto,
   populate?: PopulateOptions | (PopulateOptions | string)[],
+  filter: Record<string, any> = {},
 ): Promise<PaginatedResult<T>> {
   const {
     page = 1,
@@ -22,7 +23,7 @@ async function findAllPaginated<T>(
     [sortBy]: sortOrder === 'asc' ? 1 : -1,
   };
 
-  let query = model.find().sort(sort).skip(skip).limit(perPage);
+  let query = model.find(filter).sort(sort).skip(skip).limit(perPage);
 
   if (populate) {
     query = query.populate(populate);
@@ -30,7 +31,7 @@ async function findAllPaginated<T>(
 
   const [data, total] = await Promise.all([
     query.exec(),
-    model.countDocuments().exec(),
+    model.countDocuments(filter).exec(),
   ]);
 
   const totalPages = Math.ceil(total / perPage);
@@ -49,5 +50,4 @@ async function findAllPaginated<T>(
     },
   };
 }
-
 export { findAllPaginated, PaginatedResult };
