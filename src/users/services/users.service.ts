@@ -1,30 +1,43 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { User } from './entities/user.entity';
+import { User } from '../entities/user.entity';
 import { PaginationDto } from 'src/utils/dtos/pagination.dto';
 import { FilterQuery } from 'mongoose';
 import { findAllPaginated } from 'src/utils/generic/pagination';
-
+import * as bcrypt from 'bcrypt';
+import { CreateUserDto } from '../dto/createUser.dto';
 @Injectable()
 export class UsersService {
   constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
-  async create(user: User): Promise<User> {
+  private withNotArchived(filter: FilterQuery<User> = {}): FilterQuery<User> {
+    return { ...filter, archived: false, position: 'user' };
+  }
+
+  async create(user: CreateUserDto): Promise<User> {
     const createdUser = new this.userModel(user);
     return createdUser.save();
   }
 
   async findAllPaginatedUsers(pagination: PaginationDto) {
-    return findAllPaginated(this.userModel, pagination);
-  }
+    const filter = this.withNotArchived();
 
+    return findAllPaginated(this.userModel, pagination, undefined, {
+      ...filter,
+      banned: pagination.banned !== undefined ? pagination.banned : false,
+    });
+  }
   async findOne(filter: FilterQuery<User>): Promise<User | null> {
-    return this.userModel.findOne(filter).exec();
+    return this.userModel.findOne(this.withNotArchived(filter)).exec();
   }
 
   async findMany(filter: FilterQuery<User>): Promise<User[]> {
-    return this.userModel.find(filter).exec();
+    return this.userModel.find(this.withNotArchived(filter)).exec();
   }
 
   async findOneById(id: string): Promise<User | null> {
@@ -49,7 +62,7 @@ export class UsersService {
     update: Partial<User>,
   ): Promise<User | null> {
     return this.userModel
-      .findOneAndUpdate(filter, update, { new: true })
+      .findOneAndUpdate(this.withNotArchived(filter), update, { new: true })
       .exec();
   }
 
@@ -69,11 +82,39 @@ export class UsersService {
     return this.update({ email }, { password });
   }
 
-  // Delete operation
   async delete(filter: FilterQuery<User>): Promise<User | null> {
-    return this.userModel.findOneAndDelete(filter).exec();
+    return this.userModel.findOneAndDelete(this.withNotArchived(filter)).exec();
   }
 
+  async archiveUser(
+    id: string,
+    password: string,
+    reason?: string,
+  ): Promise<User | null> {
+    const user = await this.findOneById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const isPasswordCorrect = await bcrypt.compare(password, user.password);
+    if (!isPasswordCorrect) {
+      throw new BadRequestException('Password is incorrect');
+    }
+
+    return this.updateById(id, {
+      archived: true,
+      reason,
+    });
+  }
+
+  async banOrUnbanUser(id: string, ban: boolean): Promise<User | null> {
+    const user = await this.findOneById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return this.updateById(id, {
+      banned: ban,
+    });
+  }
   async deleteById(id: string): Promise<User | null> {
     return this.delete({ _id: id });
   }

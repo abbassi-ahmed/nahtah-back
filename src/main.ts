@@ -16,7 +16,7 @@ async function bootstrap() {
     }),
   );
   const config = new DocumentBuilder()
-    .setTitle('Backend Gym Sync')
+    .setTitle('Nahtah API')
     .setDescription('Desc')
     .setVersion('0.0.1')
     .addTag('docs')

@@ -42,17 +42,20 @@ export class NewsletterController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.newsletterService.findOne(+id);
+    return this.newsletterService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateNewsletterDto: Newsletter) {
-    return this.newsletterService.update(+id, updateNewsletterDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateNewsletterDto: CreateNewsletterDto,
+  ) {
+    return this.newsletterService.update(id, updateNewsletterDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.newsletterService.remove(+id);
+    return this.newsletterService.remove(id);
   }
   @Delete()
   removeAll() {

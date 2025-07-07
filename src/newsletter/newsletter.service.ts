@@ -26,14 +26,14 @@ export class NewsletterService {
     return findAllPaginated(this.newsletterModel, pagination);
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     return await this.newsletterModel.findById(id).exec();
   }
   async getByUserId(userId: string) {
     return await this.newsletterModel.find({ admin: userId }).exec();
   }
 
-  async update(id: number, updateNewsletterDto: Newsletter) {
+  async update(id: string, updateNewsletterDto: CreateNewsletterDto) {
     const updatedNewsletter = await this.newsletterModel
       .findByIdAndUpdate(id, updateNewsletterDto, {
         new: true,
@@ -45,7 +45,7 @@ export class NewsletterService {
     }
     return updatedNewsletter;
   }
-  async remove(id: number) {
+  async remove(id: string) {
     const deletedNewsletter = await this.newsletterModel
       .findByIdAndDelete(id)
       .exec();

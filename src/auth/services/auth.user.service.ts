@@ -7,12 +7,15 @@ import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from '../dtos/login.dto';
 import * as crypto from 'crypto';
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from 'src/users/services/users.service';
+import { CreateUserDto } from 'src/users/dto/createUser.dto';
+import { AdminsService } from 'src/users/services/admin.service';
 
 @Injectable()
 export class AuthUserService {
   constructor(
     private userService: UsersService,
+    private adminService: AdminsService,
     private jwtService: JwtService,
   ) {}
 
@@ -32,37 +35,46 @@ export class AuthUserService {
     return this.jwtService.sign(payload, options);
   }
   async login(body: LoginDto) {
-    const user = await this.userService.findOneByEmail(body.email);
+    let entity = await this.userService.findOneByEmail(body.email);
 
-    if (!user) {
+    if (!entity) {
+      entity = await this.adminService.findOneByEmail(body.email);
+    }
+
+    if (!entity) {
       throw new NotFoundException('User not found');
     }
-    const isMatch = await bcrypt.compare(body.password, user.password);
+
+    const isMatch = await bcrypt.compare(body.password, entity.password);
     if (!isMatch) {
       throw new BadRequestException('Invalid credentials');
     }
 
     const accessToken = this.createToken({
-      email: user.email,
-      id: user.id,
+      email: entity.email,
+      id: entity.id,
     });
 
     return {
-      user: user,
+      user: entity,
       access_token: accessToken,
     };
   }
-  async register(user: any) {
+  async register(user: CreateUserDto) {
     const [existingUser, phoneExist] = await Promise.all([
       this.userService.findOneByEmail(user.email),
       this.userService.findOneByPhone(user.phone),
     ]);
+    const [adminExist, adminPhoneExist] = await Promise.all([
+      this.adminService.findOneByEmail(user.email),
+      this.adminService.findOneByPhone(user.phone),
+    ]);
 
-    if (phoneExist) {
+    if (phoneExist || adminPhoneExist) {
       throw new BadRequestException('رقم الهاتف موجود بالفعل');
     }
 
-    if (existingUser) {
+    if (existingUser || adminExist) {
       throw new BadRequestException('المستخدم موجود بالفعل');
     }
 
@@ -132,7 +144,6 @@ export class AuthUserService {
     const payload = await this.jwtService.verifyAsync(token, {
       secret: process.env.JWT_SECRET,
     });
-    console.log('payload', payload);
 
     if (payload.email !== email) {
       throw new BadRequestException('Invalid token');

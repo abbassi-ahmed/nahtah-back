@@ -1,11 +1,12 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Event } from './entities/event.entity';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { PaginationDto } from 'src/utils/dtos/pagination.dto';
 import { findAllPaginated } from 'src/utils/generic/pagination';
 import { CreateEventDto } from './dto/createEventDto';
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from 'src/users/services/users.service';
+import { Gateway } from 'src/gateway/gateway';
 
 @Injectable()
 export class EventService {
@@ -13,17 +14,27 @@ export class EventService {
     @InjectModel(Event.name) private eventModel: Model<Event>,
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
+    private gateway: Gateway,
   ) {}
 
   async create(event: CreateEventDto) {
-    const client = await this.usersService.findOneById(event.clientId);
-    if (!client) {
-      throw new Error('Client not found');
+    let clientId: Types.ObjectId | undefined;
+
+    if (event.clientId) {
+      const client = await this.usersService.findOneById(event.clientId);
+      if (!client) {
+        throw new Error('Client not found');
+      }
+      clientId = client._id as Types.ObjectId;
     }
-    return this.eventModel.create({
+
+    const eventCreated = await this.eventModel.create({
       ...event,
-      client,
+      ...(clientId && { client: clientId }),
     });
+
+    this.gateway.emitEventToAll('newEvent', eventCreated);
+    return eventCreated;
   }
 
   async countDocuments(): Promise<number> {
@@ -31,8 +42,10 @@ export class EventService {
   }
 
   async findAllPaginatedEvents(pagination: PaginationDto) {
-    const filter = pagination.id ? { client: pagination.id } : {};
-
+    const filter = {
+      ...(pagination.id && { client: pagination.id }),
+      ...(pagination.status && { status: pagination.status }),
+    };
     return findAllPaginated(
       this.eventModel,
       pagination,
@@ -116,5 +129,49 @@ export class EventService {
     return await this.eventModel
       .findByIdAndUpdate(id, { status }, { new: true })
       .exec();
+  }
+
+  async getEventsReviews(pagination: PaginationDto) {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = '_id',
+      sortOrder = 'asc',
+      id,
+    } = pagination;
+    const skip = (page - 1) * limit;
+    const sortOptions: Record<string, 'asc' | 'desc'> = {};
+    sortOptions[sortBy] = sortOrder;
+
+    const [reviews, total] = await Promise.all([
+      this.eventModel
+        .find({
+          userId: id,
+          status: 'ACCEPTED',
+          rate: { $ne: null },
+          feedback: { $ne: null },
+        })
+        .select('rate feedback')
+        .sort(sortOptions)
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.eventModel.countDocuments({
+        userId: id,
+        status: 'ACCEPTED',
+        rate: { $ne: null },
+        feedback: { $ne: null },
+      }),
+    ]);
+
+    return {
+      data: reviews,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

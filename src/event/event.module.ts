@@ -4,6 +4,7 @@ import { EventController } from './event.controller';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Event, EventSchema } from './entities/event.entity';
 import { UsersModule } from 'src/users/users.module';
+import { Gateway } from 'src/gateway/gateway';
 
 @Module({
   imports: [
@@ -11,7 +12,7 @@ import { UsersModule } from 'src/users/users.module';
     forwardRef(() => UsersModule),
   ],
   controllers: [EventController],
-  providers: [EventService],
+  providers: [EventService, Gateway],
   exports: [EventService],
 })
 export class EventModule {}

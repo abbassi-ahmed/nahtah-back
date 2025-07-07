@@ -8,13 +8,13 @@ import { AuthModule } from './auth/auth.module';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './utils/interceptors/logger.interceptor';
 import { AllExceptionsFilter } from './utils/exceptions/exception.filter';
-import { AdminsModule } from './admins/admins.module';
 import { join } from 'path';
 import { EventModule } from './event/event.module';
 import { NotificationModule } from './notification/notification.module';
 import { StoreModule } from './store/store.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
 import { OffDayModule } from './off-day/off-day.module';
+import { GatewayModule } from './gateway/gateway.module';
 
 @Module({
   imports: [
@@ -27,12 +27,12 @@ import { OffDayModule } from './off-day/off-day.module';
     ),
     UsersModule,
     AuthModule,
-    AdminsModule,
     EventModule,
     NotificationModule,
     StoreModule,
     NewsletterModule,
     OffDayModule,
+    GatewayModule,
   ],
   controllers: [AppController],
   providers: [

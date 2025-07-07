@@ -8,18 +8,19 @@ import {
   Delete,
   Query,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { User } from './entities/user.entity';
+import { UsersService } from '../services/users.service';
+import { User } from '../entities/user.entity';
 import { PaginationDto } from 'src/utils/dtos/pagination.dto';
 import { FilterQuery } from 'mongoose';
 import { PaginatedResult } from 'src/types/paginatedResult';
+import { CreateUserDto } from '../dto/createUser.dto';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  async create(@Body() user: User): Promise<User> {
+  async create(@Body() user: CreateUserDto): Promise<User> {
     return this.usersService.create(user);
   }
 
@@ -57,6 +58,14 @@ export class UsersController {
     return this.usersService.findOneByPhone(phone);
   }
 
+  @Put('ban/:id')
+  async banUser(
+    @Param('id') id: string,
+    @Body() body: { ban: boolean },
+  ): Promise<User | null> {
+    return this.usersService.banOrUnbanUser(id, body.ban);
+  }
+
   @Put(':id')
   async update(
     @Param('id') id: string,
@@ -74,6 +83,13 @@ export class UsersController {
       body.code,
       body.expiration,
     );
+  }
+  @Put(':id/archive')
+  async archiveUser(
+    @Param('id') id: string,
+    @Body() body: { password: string; reason?: string },
+  ): Promise<User | null> {
+    return await this.usersService.archiveUser(id, body.password, body.reason);
   }
 
   @Put('password')

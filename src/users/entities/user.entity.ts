@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { PositionEnum } from 'src/types/positionEnum';
 
 @Schema({ timestamps: true })
 export class User extends Document {
@@ -18,11 +19,14 @@ export class User extends Document {
   })
   image: string;
 
-  @Prop({ default: 'User' })
-  position: string;
+  @Prop({ default: 'user', enum: PositionEnum })
+  position: PositionEnum;
 
   @Prop({ required: true })
   password: string;
+
+  @Prop({ default: 0 })
+  points: number;
 
   @Prop()
   resetCode: string;
@@ -30,17 +34,17 @@ export class User extends Document {
   @Prop()
   expiration: string;
 
-  @Prop()
-  points: number;
-
   @Prop({ default: false })
   banned: boolean;
 
+  @Prop({ default: false })
+  archived: boolean;
+
+  @Prop({ nullable: true })
+  reason: string;
+
   @Prop()
   pushToken: string;
-
-  @Prop({ default: 'User' })
-  type: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

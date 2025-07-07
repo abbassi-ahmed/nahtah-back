@@ -61,7 +61,10 @@ export class EventController {
   getEventByDate(@Param('date') date: string): Promise<Event[]> {
     return this.eventService.getEventByDate(date);
   }
-
+  @Get('reviews')
+  getEventsReviews(@Query() pagination: PaginationDto) {
+    return this.eventService.getEventsReviews(pagination);
+  }
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Event | null> {
     return this.eventService.findOne(id);

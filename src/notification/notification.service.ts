@@ -5,19 +5,31 @@ import { Model } from 'mongoose';
 import { PaginationDto } from 'src/utils/dtos/pagination.dto';
 import { findAllPaginated } from 'src/utils/generic/pagination';
 import { CreateNotificationDto } from './dto/createNotificationDto';
+import { Gateway } from 'src/gateway/gateway';
 
 @Injectable()
 export class NotificationService {
   constructor(
     @InjectModel(Notification.name)
     private notificationModel: Model<Notification>,
+    private gateway: Gateway,
   ) {}
 
   async create(createNotificationDto: CreateNotificationDto) {
     const createdNotification = new this.notificationModel(
       createNotificationDto,
     );
-    return await createdNotification.save();
+    const notification = await createdNotification.save();
+    if (createNotificationDto.client) {
+      this.gateway.emitEventToUser(
+        createNotificationDto.client,
+        'newNotification',
+        notification,
+      );
+    } else {
+      this.gateway.emitEventToAll('newNotification', notification);
+    }
+    return notification;
   }
 
   async findAll() {
@@ -34,7 +46,8 @@ export class NotificationService {
           viewedBy: { $ne: id },
         }
       : {};
-    return this.notificationModel.countDocuments(filter).exec();
+
+    return await this.notificationModel.countDocuments(filter).exec();
   }
 
   async findAllPaginatedNotifications(pagination: PaginationDto) {
