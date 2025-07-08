@@ -11,9 +11,13 @@ import { FilterQuery } from 'mongoose';
 import { findAllPaginated } from 'src/utils/generic/pagination';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../dto/createUser.dto';
+import { Gateway } from 'src/gateway/gateway';
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
+    private gateway: Gateway,
+  ) {}
 
   private withNotArchived(filter: FilterQuery<User> = {}): FilterQuery<User> {
     return { ...filter, archived: false, position: 'user' };
@@ -111,9 +115,20 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return this.updateById(id, {
+    const upd = this.updateById(id, {
       banned: ban,
     });
+
+    if (ban) {
+      this.gateway.emitEventToUser(
+        (user._id as string)?.toString(),
+        'newUserBanned',
+        {
+          ban,
+        },
+      );
+    }
+    return upd;
   }
   async deleteById(id: string): Promise<User | null> {
     return this.delete({ _id: id });
