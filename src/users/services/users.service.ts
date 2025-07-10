@@ -133,4 +133,13 @@ export class UsersService {
   async deleteById(id: string): Promise<User | null> {
     return this.delete({ _id: id });
   }
+
+  async addPoints(userId: string, points: number): Promise<User | null> {
+    const user = await this.findOneById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.updateById(userId, { points: user.points + points });
+  }
 }

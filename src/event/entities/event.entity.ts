@@ -32,10 +32,10 @@ export class Event extends Document {
 
   @Prop({
     type: String,
-    enum: ['ACCEPTED', 'DECLINED', 'PENDING'],
+    enum: ['ACCEPTED', 'DECLINED', 'PENDING', 'COMPLETED'],
     default: 'PENDING',
   })
-  status: 'ACCEPTED' | 'DECLINED' | 'PENDING';
+  status: 'ACCEPTED' | 'DECLINED' | 'PENDING' | 'COMPLETED';
 
   @Prop({ type: String })
   reason: string;
@@ -48,6 +48,12 @@ export class Event extends Document {
 
   @Prop({ type: String, default: 'Event' })
   type: string;
+
+  @Prop({ type: Boolean, default: false })
+  pointsAdded: boolean;
+
+  @Prop({ type: Number, default: 0 })
+  points: number;
 }
 
 export const EventSchema = SchemaFactory.createForClass(Event);

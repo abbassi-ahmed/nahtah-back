@@ -15,6 +15,8 @@ import { StoreModule } from './store/store.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
 import { OffDayModule } from './off-day/off-day.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { EventPointsTask } from './tasks/event-points.task';
 
 @Module({
   imports: [
@@ -22,6 +24,7 @@ import { GatewayModule } from './gateway/gateway.module';
       isGlobal: true,
       envFilePath: join(process.cwd(), '.env'),
     }),
+    ScheduleModule.forRoot(),
     MongooseModule.forRoot(
       'mongodb+srv://abbassi2002ahmed4:aekxX0xcOzMAhOwr@nahtahdb.i8lrmnz.mongodb.net/?retryWrites=true&w=majority&appName=nahtahdb',
     ),
@@ -45,6 +48,7 @@ import { GatewayModule } from './gateway/gateway.module';
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
     },
+    EventPointsTask,
   ],
 })
 export class AppModule {}

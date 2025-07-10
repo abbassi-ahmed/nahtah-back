@@ -3,7 +3,10 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Event } from './entities/event.entity';
 import { Model, Types } from 'mongoose';
 import { PaginationDto } from 'src/utils/dtos/pagination.dto';
-import { findAllPaginated } from 'src/utils/generic/pagination';
+import {
+  findAllPaginated,
+  PaginatedResult,
+} from 'src/utils/generic/pagination';
 import { CreateEventDto } from './dto/createEventDto';
 import { UsersService } from 'src/users/services/users.service';
 import { Gateway } from 'src/gateway/gateway';
@@ -56,19 +59,6 @@ export class EventService {
       filter,
     );
   }
-  async updateStatus(
-    id: string,
-    status: true | false | null,
-  ): Promise<Event | null> {
-    return this.eventModel
-      .findByIdAndUpdate(id, { status }, { new: true })
-      .populate('client')
-      .exec();
-  }
-
-  async getByStatus(status: boolean | null): Promise<Event[]> {
-    return await this.eventModel.find({ status }).populate('client').exec();
-  }
 
   async getByClientId(clientId: string): Promise<Event[]> {
     return this.eventModel.find({ clientId }).exec();
@@ -89,7 +79,7 @@ export class EventService {
     const events = await this.eventModel
       .find({
         startDate: formattedDate,
-        status: { $in: ['ACCEPTED', 'PENDING'] },
+        status: { $in: ['ACCEPTED', 'PENDING', 'COMPLETED'] },
       })
       .populate('client')
       .exec();
@@ -124,7 +114,7 @@ export class EventService {
 
   async updateEventStatus(
     id: string,
-    status: 'ACCEPTED' | 'DECLINED' | 'PENDING',
+    status: 'ACCEPTED' | 'DECLINED' | 'PENDING' | 'COMPLETED',
   ) {
     return await this.eventModel
       .findByIdAndUpdate(id, { status }, { new: true })
@@ -147,7 +137,7 @@ export class EventService {
       this.eventModel
         .find({
           userId: id,
-          status: 'ACCEPTED',
+          status: 'COMPLETED',
           rate: { $ne: null },
           feedback: { $ne: null },
         })
@@ -158,7 +148,7 @@ export class EventService {
         .exec(),
       this.eventModel.countDocuments({
         userId: id,
-        status: 'ACCEPTED',
+        status: 'COMPLETED',
         rate: { $ne: null },
         feedback: { $ne: null },
       }),
@@ -173,5 +163,45 @@ export class EventService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async getEventsByDateAndTime(
+    dateStart: string,
+    dateEnd: string,
+    timeStart: string,
+    timeEnd: string,
+    pagination: PaginationDto,
+  ): Promise<PaginatedResult<Event>> {
+    console.log(dateStart, dateEnd, timeStart, timeEnd);
+    const filter = {
+      startDate: { $gte: dateStart, $lte: dateEnd },
+      $or: [
+        { startTime: { $gte: timeStart, $lt: timeEnd } },
+        { endTime: { $gt: timeStart, $lte: timeEnd } },
+        { startTime: { $lte: timeStart }, endTime: { $gte: timeEnd } },
+      ],
+    };
+
+    return findAllPaginated(
+      this.eventModel,
+      pagination,
+      { path: 'client' },
+      filter,
+    );
+  }
+
+  async getEventsAcceptedAroundTime(date: Date): Promise<Event[]> {
+    return this.eventModel
+      .find({
+        status: 'ACCEPTED',
+        updatedAt: { $lte: date },
+        pointsAdded: { $ne: true },
+      })
+      .exec();
+  }
+  async markPointsAdded(eventId: string) {
+    return this.eventModel
+      .findByIdAndUpdate(eventId, { pointsAdded: true })
+      .exec();
   }
 }

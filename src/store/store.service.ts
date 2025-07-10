@@ -53,6 +53,12 @@ export class StoreService {
     }
   }
 
+  async getStore(): Promise<Store | null> {
+    const [store] = await this.storeModel.find().limit(1).exec();
+    if (!store) return null;
+    return store;
+  }
+
   async getByDate(
     date: string,
     userId: string,

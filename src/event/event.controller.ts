@@ -37,17 +37,6 @@ export class EventController {
     return this.eventService.findAllPaginatedEvents(pagination);
   }
 
-  @Get('status/:status')
-  getByStatus(@Param('status') status: string): Promise<Event[]> {
-    let statusValue: boolean | null;
-
-    if (status === 'true') statusValue = true;
-    else if (status === 'false') statusValue = false;
-    else statusValue = null;
-
-    return this.eventService.getByStatus(statusValue);
-  }
-
   @Get('client/:clientId')
   getByClientId(@Param('clientId') clientId: string): Promise<Event[]> {
     return this.eventService.getByClientId(clientId);
@@ -70,6 +59,26 @@ export class EventController {
     return this.eventService.findOne(id);
   }
 
+  @Post('filter')
+  async getEventsByDateAndTime(
+    @Body()
+    body: {
+      startDate: string;
+      endDate: string;
+      startTime: string;
+      endTime: string;
+      pagination?: PaginationDto;
+    },
+  ): Promise<PaginatedResult<Event>> {
+    return this.eventService.getEventsByDateAndTime(
+      body.startDate,
+      body.endDate,
+      body.startTime,
+      body.endTime,
+      body.pagination || {},
+    );
+  }
+
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -78,19 +87,6 @@ export class EventController {
     return this.eventService.update(id, updateEventDto);
   }
 
-  @Patch(':id/status/:status')
-  updateStatus(
-    @Param('id') id: string,
-    @Param('status') status: string,
-  ): Promise<Event | null> {
-    let statusValue: true | false | null;
-
-    if (status === 'true') statusValue = true;
-    else if (status === 'false') statusValue = false;
-    else statusValue = null;
-
-    return this.eventService.updateStatus(id, statusValue);
-  }
   @Put(':id/feedback')
   updateFeedback(
     @Param('id') id: string,
@@ -102,7 +98,8 @@ export class EventController {
   @Put(':id/status')
   updateEventStatus(
     @Param('id') id: string,
-    @Body() { status }: { status: 'ACCEPTED' | 'DECLINED' | 'PENDING' },
+    @Body()
+    { status }: { status: 'ACCEPTED' | 'DECLINED' | 'PENDING' | 'COMPLETED' },
   ): Promise<Event | null> {
     return this.eventService.updateEventStatus(id, status);
   }

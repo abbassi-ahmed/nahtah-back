@@ -6,6 +6,7 @@ export class CreateEventDto {
   endTime: string;
   userId: string;
   description: string;
+  points: number;
   barberImg: string;
   clientId: string;
 }

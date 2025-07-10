@@ -30,6 +30,10 @@ export class StoreController {
     const result = await this.storeService.getByDate(body.date, body.userId);
     return result.AllTimes;
   }
+  @Get()
+  getStore() {
+    return this.storeService.getStore();
+  }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
