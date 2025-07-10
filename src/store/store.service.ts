@@ -25,9 +25,13 @@ export class StoreService {
   ) {}
 
   async create(createStoreDto: CreateStoreDto): Promise<Store> {
-    const { timeOpen, timeClose } = createStoreDto;
+    const { timeOpen, timeClose, barberId } = createStoreDto;
 
-    await this.storeModel.deleteMany().exec();
+    const store = await this.getStoreByBarberId(createStoreDto.barberId);
+    if (store) {
+      await this.remove((store._id as string).toString());
+    }
+
     let openTime: Date;
     let closeTime: Date;
 
@@ -43,6 +47,7 @@ export class StoreService {
     const storeData = {
       timeOpen: openTime,
       timeClose: closeTime,
+      barberId,
     };
 
     try {
@@ -59,11 +64,26 @@ export class StoreService {
     return store;
   }
 
+  async getStoreByBarberId(barberId: string): Promise<Store | null> {
+    const [store] = await this.storeModel.find({ barberId }).limit(1).exec();
+    console.log(barberId);
+    if (!store) {
+      await this.storeModel.create({
+        timeOpen: parseStoreTime('00:00:00'),
+        timeClose: parseStoreTime('23:59:59'),
+        barberId,
+      });
+      return await this.getStoreByBarberId(barberId);
+    }
+    if (!store) return null;
+    return store;
+  }
+
   async getByDate(
     date: string,
     userId: string,
   ): Promise<{ AllTimes: TTimeSlot[] }> {
-    const [store] = await this.storeModel.find().limit(1).exec();
+    const store = await this.getStoreByBarberId(userId);
     if (!store) return { AllTimes: [] };
 
     const events = await this.eventService.getEventByDate(date);

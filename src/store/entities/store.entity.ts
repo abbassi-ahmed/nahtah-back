@@ -8,6 +8,8 @@ export class Store extends Document {
 
   @Prop({ type: String, required: true })
   timeClose: string;
+  @Prop({ type: String, required: true })
+  barberId: string;
 }
 
 export const StoreSchema = SchemaFactory.createForClass(Store);

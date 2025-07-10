@@ -20,6 +20,7 @@ export class StoreController {
     return this.storeService.create({
       timeOpen: createStoreDto.timeOpen,
       timeClose: createStoreDto.timeClose,
+      barberId: createStoreDto.barberId,
     });
   }
 
@@ -30,14 +31,9 @@ export class StoreController {
     const result = await this.storeService.getByDate(body.date, body.userId);
     return result.AllTimes;
   }
-  @Get()
-  getStore() {
-    return this.storeService.getStore();
-  }
-
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.storeService.findOne(id);
+  getStoreByBarberId(@Param('id') id: string) {
+    return this.storeService.getStoreByBarberId(id);
   }
 
   @Patch(':id')
