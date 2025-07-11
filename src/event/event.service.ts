@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Event } from './entities/event.entity';
 import { Model, Types } from 'mongoose';
@@ -10,6 +10,9 @@ import {
 import { CreateEventDto } from './dto/createEventDto';
 import { UsersService } from 'src/users/services/users.service';
 import { Gateway } from 'src/gateway/gateway';
+import { SchedulerRegistry } from '@nestjs/schedule';
+import * as cron from 'node-cron';
+import * as moment from 'moment';
 
 @Injectable()
 export class EventService {
@@ -18,6 +21,7 @@ export class EventService {
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
     private gateway: Gateway,
+    private schedulerRegistry: SchedulerRegistry,
   ) {}
 
   async create(event: CreateEventDto) {
@@ -116,11 +120,68 @@ export class EventService {
     id: string,
     status: 'ACCEPTED' | 'DECLINED' | 'PENDING' | 'COMPLETED',
   ) {
-    return await this.eventModel
+    const event = await this.eventModel
       .findByIdAndUpdate(id, { status }, { new: true })
       .exec();
-  }
 
+    this.removeCronJob(id);
+
+    switch (status) {
+      case 'ACCEPTED': {
+        const endDateTime = moment(
+          `${event?.endDate} ${event?.endTime}`,
+          'YYYY-MM-DD HH:mm',
+        );
+        Logger.warn('event accepted will start at', endDateTime.toDate());
+
+        if (endDateTime.isAfter(moment())) {
+          const cronExpression = `${endDateTime.minute()} ${endDateTime.hour()} ${endDateTime.date()} ${endDateTime.month() + 1} *`;
+
+          const job = cron.schedule(cronExpression, async () => {
+            const currentEvent = await this.eventModel.findById(id);
+            if (currentEvent?.status === 'ACCEPTED') {
+              await this.eventModel.findByIdAndUpdate(id, {
+                status: 'COMPLETED',
+              });
+
+              if (currentEvent.client && !currentEvent.pointsAdded) {
+                await this.usersService.addPoints(
+                  currentEvent.client._id.toString(),
+                  currentEvent.points,
+                );
+                await this.markPointsAdded(id);
+              }
+            }
+            this.removeCronJob(id);
+          });
+
+          this.schedulerRegistry.addCronJob(id, job as any);
+          job.start();
+          Logger.warn('job started');
+        }
+
+        break;
+      }
+
+      case 'COMPLETED':
+        if (event?.client && !event.pointsAdded) {
+          await this.usersService.addPoints(
+            event.client._id.toString(),
+            event.points,
+          );
+          await this.markPointsAdded(id);
+        }
+        break;
+
+      case 'DECLINED':
+      case 'PENDING':
+        Logger.warn('job removed');
+        this.removeCronJob(id);
+        break;
+    }
+
+    return event;
+  }
   async getEventsReviews(pagination: PaginationDto) {
     const {
       page = 1,
@@ -172,7 +233,6 @@ export class EventService {
     timeEnd: string,
     pagination: PaginationDto,
   ): Promise<PaginatedResult<Event>> {
-    console.log(dateStart, dateEnd, timeStart, timeEnd);
     const filter = {
       startDate: { $gte: dateStart, $lte: dateEnd },
       $or: [
@@ -203,5 +263,12 @@ export class EventService {
     return this.eventModel
       .findByIdAndUpdate(eventId, { pointsAdded: true })
       .exec();
+  }
+
+  private removeCronJob(id: string) {
+    const cronExists = this.schedulerRegistry.doesExist('cron', id);
+    if (cronExists) {
+      this.schedulerRegistry.deleteCronJob(id);
+    }
   }
 }

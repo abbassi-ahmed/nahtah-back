@@ -16,7 +16,6 @@ import { NewsletterModule } from './newsletter/newsletter.module';
 import { OffDayModule } from './off-day/off-day.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { ScheduleModule } from '@nestjs/schedule';
-import { EventPointsTask } from './tasks/event-points.task';
 
 @Module({
   imports: [
@@ -48,7 +47,6 @@ import { EventPointsTask } from './tasks/event-points.task';
       provide: APP_FILTER,
       useClass: AllExceptionsFilter,
     },
-    EventPointsTask,
   ],
 })
 export class AppModule {}
