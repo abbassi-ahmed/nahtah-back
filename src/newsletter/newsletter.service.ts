@@ -1,20 +1,34 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Newsletter } from './entities/newsletter.entity';
 import { Model } from 'mongoose';
 import { PaginationDto } from 'src/utils/dtos/pagination.dto';
 import { findAllPaginated } from 'src/utils/generic/pagination';
 import { CreateNewsletterDto } from './dto/createNewsLetter';
+import { FirebaseService } from 'src/expo/expo.service';
 
 @Injectable()
 export class NewsletterService {
   constructor(
     @InjectModel(Newsletter.name)
     private readonly newsletterModel: Model<Newsletter>,
+    @Inject(forwardRef(() => FirebaseService))
+    private firebaseService: FirebaseService,
   ) {}
 
   async create(createNewsletterDto: CreateNewsletterDto) {
     const createdNewsletter = new this.newsletterModel(createNewsletterDto);
+    const users = await this.firebaseService.getUsers();
+
+    console.log(users);
+    // await this.firebaseService.sendBulkNotifications(
+    //   users.map((user) => user.uid),
+    //   'Newsletter',
+    //   'Newsletter',
+    //   'default',
+    //   { newsletter: createdNewsletter },
+    // );
+
     return await createdNewsletter.save();
   }
 

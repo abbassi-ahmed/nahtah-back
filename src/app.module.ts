@@ -16,6 +16,7 @@ import { NewsletterModule } from './newsletter/newsletter.module';
 import { OffDayModule } from './off-day/off-day.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ExpoModule } from './expo/expo.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     NewsletterModule,
     OffDayModule,
     GatewayModule,
+    ExpoModule,
   ],
   controllers: [AppController],
   providers: [
