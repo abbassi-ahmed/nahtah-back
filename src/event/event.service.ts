@@ -13,6 +13,7 @@ import { Gateway } from 'src/gateway/gateway';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import * as cron from 'node-cron';
 import * as moment from 'moment';
+import { FirebaseService } from 'src/expo/expo.service';
 
 @Injectable()
 export class EventService {
@@ -20,6 +21,8 @@ export class EventService {
     @InjectModel(Event.name) private eventModel: Model<Event>,
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
+    @Inject(forwardRef(() => FirebaseService))
+    private firbaseService: FirebaseService,
     private gateway: Gateway,
     private schedulerRegistry: SchedulerRegistry,
   ) {}
@@ -39,6 +42,15 @@ export class EventService {
       ...event,
       ...(clientId && { client: clientId }),
     });
+
+    if (eventCreated.client) {
+      await this.firbaseService.sendNotificationsToRole(
+        'admin',
+        'الحدث الجديد',
+        'تم إرسال حدث جديد',
+        'event',
+      );
+    }
 
     this.gateway.emitEventToAll('newEvent', eventCreated);
     return eventCreated;
@@ -135,31 +147,68 @@ export class EventService {
         Logger.warn('event accepted will start at', endDateTime.toDate());
 
         if (endDateTime.isAfter(moment())) {
-          const cronExpression = `${endDateTime.minute()} ${endDateTime.hour()} ${endDateTime.date()} ${endDateTime.month() + 1} *`;
+          const completionCronExpression = `${endDateTime.minute()} ${endDateTime.hour()} ${endDateTime.date()} ${endDateTime.month() + 1} *`;
 
-          const job = cron.schedule(cronExpression, async () => {
-            const currentEvent = await this.eventModel.findById(id);
-            if (currentEvent?.status === 'ACCEPTED') {
-              await this.eventModel.findByIdAndUpdate(id, {
-                status: 'COMPLETED',
-              });
+          const completionJob = cron.schedule(
+            completionCronExpression,
+            async () => {
+              const currentEvent = await this.eventModel.findById(id);
+              if (currentEvent?.status === 'ACCEPTED') {
+                await this.eventModel.findByIdAndUpdate(id, {
+                  status: 'COMPLETED',
+                });
 
-              if (currentEvent.client && !currentEvent.pointsAdded) {
-                await this.usersService.addPoints(
-                  currentEvent.client._id.toString(),
-                  currentEvent.points,
-                );
-                await this.markPointsAdded(id);
+                if (currentEvent.client && !currentEvent.pointsAdded) {
+                  await this.usersService.addPoints(
+                    currentEvent.client._id.toString(),
+                    currentEvent.points,
+                  );
+                  await this.markPointsAdded(id);
+                }
               }
-            }
-            this.removeCronJob(id);
-          });
+              this.removeCronJob(`${id}-completion`);
+              this.removeCronJob(`${id}-reminder`);
+            },
+          );
 
-          this.schedulerRegistry.addCronJob(id, job as any);
-          job.start();
-          Logger.warn('job started');
+          this.schedulerRegistry.addCronJob(
+            `${id}-completion`,
+            completionJob as any,
+          );
+          await completionJob.start();
+          Logger.warn('completion job started');
+
+          const reminderTime = endDateTime.clone().subtract(15, 'minutes');
+          if (reminderTime.isAfter(moment())) {
+            const reminderCronExpression = `${reminderTime.minute()} ${reminderTime.hour()} ${reminderTime.date()} ${reminderTime.month() + 1} *`;
+
+            const reminderJob = cron.schedule(
+              reminderCronExpression,
+              async () => {
+                const currentEvent = await this.eventModel.findById(id);
+                if (
+                  currentEvent?.status === 'ACCEPTED' &&
+                  currentEvent.client
+                ) {
+                  await this.firbaseService.sendPushNotification(
+                    currentEvent.client._id.toString(),
+                    '⏰ تذكير بموعد الحلاقة',
+                    'موعد حلاقتك بعد 15 دقيقة! نرجو الحضور في الوقت المحدد.',
+                    'event',
+                  );
+                }
+                this.removeCronJob(`${id}-reminder`);
+              },
+            );
+
+            this.schedulerRegistry.addCronJob(
+              `${id}-reminder`,
+              reminderJob as any,
+            );
+            await reminderJob.start();
+            Logger.warn('reminder job started');
+          }
         }
-
         break;
       }
 
@@ -170,13 +219,41 @@ export class EventService {
             event.points,
           );
           await this.markPointsAdded(id);
+          await this.firbaseService.sendPushNotification(
+            event.client._id.toString(),
+            '💇‍♂️ تم الانتهاء من حجز الحلاقة',
+            'تمت حلاقة شعرك بنجاح! شاركنا رأيك في الخدمة وساعدنا على تحسين تجربتك.',
+            'event',
+          );
         }
         break;
 
       case 'DECLINED':
+        if (event?.client) {
+          await this.firbaseService.sendPushNotification(
+            event.client._id.toString(),
+            '❌ تم إلغاء الحلاقة',
+            'نعتذر، تم إلغاء حجزك للحلاقة. يرجى إعادة الحجز أو التواصل معنا للمساعدة.',
+            'event',
+          );
+        }
+        Logger.warn('jobs removed');
+        this.removeCronJob(`${id}-completion`);
+        this.removeCronJob(`${id}-reminder`);
+        break;
+
       case 'PENDING':
-        Logger.warn('job removed');
-        this.removeCronJob(id);
+        if (event?.client) {
+          await this.firbaseService.sendPushNotification(
+            event.client._id.toString(),
+            '⏳ جاري تأكيد موعد الحلاقة',
+            'تم استلام طلبك للحلاقة وسنقوم بتأكيده قريباً. شكراً لثقتك!',
+            'event',
+          );
+        }
+        Logger.warn('jobs removed');
+        this.removeCronJob(`${id}-completion`);
+        this.removeCronJob(`${id}-reminder`);
         break;
     }
 
