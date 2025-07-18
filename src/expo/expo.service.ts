@@ -6,7 +6,6 @@ import { Expo, ExpoPushTicket } from 'expo-server-sdk';
 @Injectable()
 export class FirebaseService {
   private expo = new Expo();
-
   private db;
   private dbRef;
 
@@ -27,24 +26,38 @@ export class FirebaseService {
     this.dbRef = ref(this.db);
   }
 
-  async saveToken(userId: string, token: string): Promise<void> {
+  async saveToken(userId: string, token: string, role: string): Promise<void> {
     const userDataRef = ref(this.db, `users/${userId}`);
+    const roleRef = ref(this.db, `roles/${role}/${userId}`);
+
     const snapshot = await get(userDataRef);
     const userData = snapshot.val() || {};
 
-    const tokens = userData.tokens ? userData.tokens : [];
-    if (!tokens.includes(token)) {
-      await set(userDataRef, { ...userData, tokens: [...tokens, token] });
+    const updatedUserData = {
+      ...userData,
+      role,
+      tokens: userData.tokens || [],
+    };
+
+    if (!updatedUserData.tokens.includes(token)) {
+      updatedUserData.tokens = [...updatedUserData.tokens, token];
     }
+
+    await set(userDataRef, updatedUserData);
+
+    await set(roleRef, { hasToken: updatedUserData.tokens.length > 0 });
   }
 
   async getUsers(): Promise<any> {
     const usersRef = ref(this.db, 'users');
     const snapshot = await get(usersRef);
-    if (snapshot.exists()) {
-      return snapshot.val();
-    }
-    return null;
+    return snapshot.exists() ? snapshot.val() : null;
+  }
+
+  async getUsersByRole(role: string): Promise<string[]> {
+    const roleRef = ref(this.db, `roles/${role}`);
+    const snapshot = await get(roleRef);
+    return snapshot.exists() ? Object.keys(snapshot.val()) : [];
   }
 
   async getTokens(userId: string): Promise<string[]> {
@@ -52,6 +65,18 @@ export class FirebaseService {
     const snapshot = await get(userDataRef);
     const userData = snapshot.val() || {};
     return userData.tokens || [];
+  }
+
+  async getTokensByRole(role: string): Promise<string[]> {
+    const userIds = await this.getUsersByRole(role);
+    let allTokens: string[] = [];
+
+    for (const userId of userIds) {
+      const tokens = await this.getTokens(userId);
+      allTokens = [...allTokens, ...tokens];
+    }
+
+    return allTokens;
   }
 
   async deleteToken(userId: string, tokenToDelete: string): Promise<void> {
@@ -64,6 +89,11 @@ export class FirebaseService {
         (token) => token !== tokenToDelete,
       );
       await set(userDataRef, { ...userData, tokens: updatedTokens });
+
+      if (updatedTokens.length === 0 && userData.role) {
+        const roleRef = ref(this.db, `roles/${userData.role}/${userId}`);
+        await set(roleRef, { hasToken: false });
+      }
     }
   }
 
@@ -74,6 +104,11 @@ export class FirebaseService {
 
     if (userData.tokens) {
       await set(userDataRef, { ...userData, tokens: [] });
+
+      if (userData.role) {
+        const roleRef = ref(this.db, `roles/${userData.role}/${userId}`);
+        await set(roleRef, { hasToken: false });
+      }
     }
   }
 
@@ -121,10 +156,10 @@ export class FirebaseService {
     channelId: string = 'default',
     data?: any,
   ) {
-    const allTokens: ExpoPushTicket[] = [];
+    const allTokens: string[] = [];
 
     for (const userId of userIds) {
-      const tokens: any = await this.getTokens(userId);
+      const tokens = await this.getTokens(userId);
       if (tokens && tokens.length > 0) {
         allTokens.push(...tokens);
       }
@@ -134,12 +169,13 @@ export class FirebaseService {
       throw new Error('No push tokens found for any of the users');
     }
 
-    const messages = allTokens.map((token: any) => ({
+    const messages = allTokens.map((token) => ({
       to: token,
       sound: 'default',
       title,
       body,
       channelId,
+      data,
     }));
 
     try {
@@ -157,5 +193,21 @@ export class FirebaseService {
         `Error sending bulk push notifications: ${error.message}`,
       );
     }
+  }
+
+  async sendNotificationsToRole(
+    role: string,
+    title: string = 'Event',
+    body: string = 'Event',
+    channelId: string = 'default',
+    data?: any,
+  ) {
+    const users = await this.getUsersByRole(role);
+    if (users.length === 0) {
+      throw new Error(`No push tokens found for role: ${role}`);
+    }
+    const userIds = Object.keys(users);
+
+    return this.sendBulkNotifications(userIds, title, body, channelId, data);
   }
 }

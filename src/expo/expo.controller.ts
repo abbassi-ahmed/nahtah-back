@@ -1,18 +1,17 @@
 import { Controller, Post, Get, Body, Delete, Param } from '@nestjs/common';
-import { Expo, ExpoPushTicket } from 'expo-server-sdk';
 import { FirebaseService } from './expo.service';
 
 @Controller('expo-notif')
 export class PushNotificationController {
-  private expo = new Expo();
-
   constructor(private readonly firebaseService: FirebaseService) {}
 
   @Post('register-token')
-  async registerPushToken(@Body() body: { token: string; userId: string }) {
-    const { token, userId } = body;
-    await this.firebaseService.saveToken(userId, token);
-    return { message: 'Token saved' };
+  async registerPushToken(
+    @Body() body: { token: string; userId: string; role: string },
+  ) {
+    const { token, userId, role } = body;
+    await this.firebaseService.saveToken(userId, token, role);
+    return { message: 'Token saved with role information' };
   }
 
   @Post('send')
@@ -38,6 +37,29 @@ export class PushNotificationController {
     return { message: 'Notification sent', tickets };
   }
 
+  @Post('send-to-role')
+  async sendNotificationToRole(
+    @Body()
+    body: {
+      role: string;
+      title?: string;
+      body?: string;
+      channelId?: string;
+      data?: any;
+    },
+  ) {
+    const { role, title, body: messageBody, channelId, data } = body;
+    const tickets = await this.firebaseService.sendNotificationsToRole(
+      role,
+      title,
+      messageBody,
+      channelId,
+      data,
+    );
+
+    return { message: `Notification sent to all ${role}s`, tickets };
+  }
+
   @Post('delete-token')
   async deleteToken(@Body() body: { userId: string; token: string }) {
     const { userId, token } = body;
@@ -49,6 +71,12 @@ export class PushNotificationController {
   async getConnectedUsers() {
     const users = await this.firebaseService.getUsers();
     return users;
+  }
+
+  @Get('users-by-role/:role')
+  async getUsersByRole(@Param('role') role: string) {
+    const userIds = await this.firebaseService.getUsersByRole(role);
+    return { role, userIds };
   }
 
   @Delete(':userId/tokens')

@@ -19,15 +19,13 @@ export class NewsletterService {
   async create(createNewsletterDto: CreateNewsletterDto) {
     const createdNewsletter = new this.newsletterModel(createNewsletterDto);
     const users = await this.firebaseService.getUsers();
-
-    console.log(users);
-    // await this.firebaseService.sendBulkNotifications(
-    //   users.map((user) => user.uid),
-    //   'Newsletter',
-    //   'Newsletter',
-    //   'default',
-    //   { newsletter: createdNewsletter },
-    // );
+    const userIds = Object.keys(users);
+    await this.firebaseService.sendNotificationsToRole(
+      'user',
+      'النشرة الإخبارية',
+      'تم إرسال نشرة جديدة',
+      'newsletter',
+    );
 
     return await createdNewsletter.save();
   }
