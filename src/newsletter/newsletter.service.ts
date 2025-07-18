@@ -18,8 +18,6 @@ export class NewsletterService {
 
   async create(createNewsletterDto: CreateNewsletterDto) {
     const createdNewsletter = new this.newsletterModel(createNewsletterDto);
-    const users = await this.firebaseService.getUsers();
-    const userIds = Object.keys(users);
     await this.firebaseService.sendNotificationsToRole(
       'user',
       '📰 نشرة جديدة متوفرة',
