@@ -46,9 +46,9 @@ export class EventService {
     if (eventCreated.client) {
       await this.firbaseService.sendNotificationsToRole(
         'admin',
-        'الحدث الجديد',
-        'تم إرسال حدث جديد',
-        'event',
+        '✂️ حجز جديد للحلاقة',
+        'تم إنشاء حجز حلاقة جديد، يُرجى مراجعته واتخاذ الإجراءات اللازمة.',
+        'newEvent',
       );
     }
 

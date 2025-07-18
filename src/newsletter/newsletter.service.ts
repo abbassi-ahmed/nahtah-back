@@ -22,8 +22,8 @@ export class NewsletterService {
     const userIds = Object.keys(users);
     await this.firebaseService.sendNotificationsToRole(
       'user',
-      'النشرة الإخبارية',
-      'تم إرسال نشرة جديدة',
+      '📰 نشرة جديدة متوفرة',
+      'اطّلع على آخر الأخبار والتحديثات في النشرة الجديدة الآن.',
       'newsletter',
     );
 
