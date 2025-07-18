@@ -122,7 +122,7 @@ export class FirebaseService {
     const tokens = await this.getTokens(userId);
 
     if (!tokens || tokens.length === 0) {
-      throw new Error('No push tokens found for this user');
+      return;
     }
 
     const messages = tokens.map((token) => ({
@@ -166,7 +166,7 @@ export class FirebaseService {
     }
 
     if (allTokens.length === 0) {
-      throw new Error('No push tokens found for any of the users');
+      return;
     }
 
     const messages = allTokens.map((token) => ({
@@ -204,7 +204,7 @@ export class FirebaseService {
   ) {
     const users = await this.getUsersByRole(role);
     if (users.length === 0) {
-      throw new Error(`No push tokens found for role: ${role}`);
+      return;
     }
     const userIds = Object.keys(users);
 
